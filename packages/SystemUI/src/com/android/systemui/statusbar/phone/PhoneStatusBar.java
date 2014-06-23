@@ -688,7 +688,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
                 mSettingsButton.setVisibility(userSetup ? View.VISIBLE : View.INVISIBLE);
             }
             if (mHoverButton != null && mHasFlipSettings) {
-                mHoverButton.setVisibility(userSetup ? View.VISIBLE : View.INVISIBLE);
+                updateHoverButton(userSetup);
             }
             if (mSettingsPanel != null) {
                 mSettingsPanel.setEnabled(userSetup);
@@ -1051,7 +1051,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         mHoverButton = (ImageView) mStatusBarWindow.findViewById(R.id.hover_button);
         if (mHoverButton != null) {
             mHoverButton.setOnClickListener(mHoverButtonListener);
-            mHoverButton.setVisibility(View.VISIBLE);
+            updateHoverButton(true);
         }
 
         if (mHasFlipSettings) {
@@ -1256,9 +1256,8 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
 
                 if (mHoverButton != null) {
                     mHoverButton.setImageDrawable(null);
-                    mHoverButton.setImageResource(mHoverState != HOVER_DISABLED
-                            ? R.drawable.ic_notify_hover_pressed
-                                    : R.drawable.ic_notify_hover_normal);
+                    mHoverButton.setImageResource(mHoverActive ?
+                            R.drawable.ic_notify_hover_pressed : R.drawable.ic_notify_hover_normal);
                 }
 
                 // Start observing for changes
@@ -2496,7 +2495,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         mSettingsButtonAnim = start(
             ObjectAnimator.ofFloat(mSettingsButton, View.ALPHA, 1f)
                 .setDuration(FLIP_DURATION));
-        mHoverButton.setVisibility(View.VISIBLE);
+        updateHoverButton(true);
         mHoverButtonAnim = start(
             ObjectAnimator.ofFloat(mHoverButton, View.ALPHA, 1f)
                 .setDuration(FLIP_DURATION));
@@ -2552,7 +2551,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         mFlipSettingsView.setScaleX(1f);
         mFlipSettingsView.setVisibility(View.VISIBLE);
         mSettingsButton.setVisibility(View.GONE);
-        mHoverButton.setVisibility(View.GONE);
+        updateHoverButton(false);
         mScrollView.setVisibility(View.GONE);
         mScrollView.setScaleX(0f);
         if (mRibbonView != null) {
@@ -2752,7 +2751,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             mSettingsButton.setAlpha(1f);
             mSettingsButton.setVisibility(View.VISIBLE);
             mHoverButton.setAlpha(1f);
-            mHoverButton.setVisibility(View.VISIBLE);
+            updateHoverButton(true);
             mNotificationPanel.setVisibility(View.GONE);
             mFlipSettingsView.setVisibility(View.GONE);
             mNotificationButton.setVisibility(View.GONE);
@@ -3271,7 +3270,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
                             | StatusBarManager.DISABLE_NOTIFICATION_TICKER))) {
                 boolean blacklisted = false;
                 // don't pass notifications that run in Hover to Ticker
-                if (mHoverState == HOVER_ENABLED) {
+                if (mHoverActive) {
                     try {
                         blacklisted = getNotificationManager().isPackageAllowedForHover(n.getPackageName());
                     } catch (android.os.RemoteException ex) {
@@ -3304,7 +3303,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
 
         @Override
         public void tickerStarting() {
-            if (mHoverState == HOVER_DISABLED) mTicking = true;
+            if (!mHoverActive) mTicking = true;
             mTicking = true;
             mStatusBarContents.setVisibility(View.GONE);
             mCenterClockLayout.setVisibility(View.GONE);
@@ -3690,15 +3689,14 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             if (mHoverCling != null) {
                 boolean firstRun = mHoverCling.loadSetting();
                 // we're pushing the button, so use inverse logic
-                mHoverCling.hoverChanged(mHoverState == HOVER_DISABLED);
+                mHoverCling.hoverChanged(!mHoverActive);
                 if (firstRun) {
                     animateCollapsePanels(CommandQueue.FLAG_EXCLUDE_NONE);
                 }
             }
             Settings.System.putInt(mContext.getContentResolver(),
-                    Settings.System.HOVER_STATE,
-                            mHoverState != HOVER_DISABLED ? HOVER_DISABLED : HOVER_ENABLED);
-            updateHoverState();
+                    Settings.System.HOVER_ACTIVE, mHoverActive ? 0 : 1);
+            updateHoverActive();
         }
     };
 
