@@ -26,6 +26,10 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.app.PendingIntent;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -52,6 +56,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.android.internal.widget.SizeAdaptiveLayout;
+import android.provider.Settings;
+
 import com.android.systemui.R;
 import com.android.systemui.statusbar.BaseStatusBar;
 import com.android.systemui.statusbar.BaseStatusBar.NotificationClicker;
@@ -88,6 +94,10 @@ public class NotificationHelper {
 
     public boolean mRingingOrConnected = false;
     public boolean mPeekAppOverlayShowing = false;
+
+    private BaseStatusBar mStatusBar;
+    private Context mContext;
+    private ActivityManager mActivityManager;
 
     /**
      * Creates a new instance
@@ -171,6 +181,14 @@ public class NotificationHelper {
                     && !isNotificationBlacklisted(entry.notification.getPackageName())
                     // if the notification is from the foreground app, don't open in floating mode
                     && !entry.notification.getPackageName().equals(getForegroundPackageName());
+
+            intent = mStatusBar.makeClicker(contentIntent,
+                    entry.notification.getPackageName(), entry.notification.getTag(),
+                    entry.notification.getId());
+            boolean makeFloating = floating
+                    // if the notification is from the foreground app, don't open in floating mode
+                    && !entry.notification.getPackageName().equals(getForegroundPackageName())
+                    && openInFloatingMode();
 
             intent.makeFloating(makeFloating);
         }
@@ -318,5 +336,10 @@ public class NotificationHelper {
         return state == TelephonyManager.SIM_STATE_PIN_REQUIRED
                 | state == TelephonyManager.SIM_STATE_PUK_REQUIRED
                 | state == TelephonyManager.SIM_STATE_NETWORK_LOCKED;
+    }
+
+    public boolean openInFloatingMode() {
+        return Settings.System.getBoolean(mContext.getContentResolver(),
+                Settings.System.HEADS_UP_FLOATING_WINDOW, true);
     }
 }
