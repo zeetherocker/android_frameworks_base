@@ -85,6 +85,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import com.android.server.AttributeCache;
 
 /**
  * State and management of a single stack of activities.
@@ -1101,7 +1102,7 @@ final class ActivityStack {
                             if (!r.visible) {
                                 if (DEBUG_VISBILITY) Slog.v(
                                         TAG, "Starting and making visible: " + r);
-                                r.visible = true;
+                                        r.visible = true;
                                 mWindowManager.setAppVisibility(r.appToken, true);
                             }
                             if (r != starting) {
@@ -1145,7 +1146,7 @@ final class ActivityStack {
                     // Aggregate current change flags.
                     configChanges |= r.configChangeFlags;
 
-                    if (r.fullscreen) {
+                    if (r.fullscreen && !r.floatingWindow) {
                         // At this point, nothing else needs to be shown
                         if (DEBUG_VISBILITY) Slog.v(TAG, "Fullscreen: at " + r);
                         behindFullscreen = true;
@@ -1296,8 +1297,18 @@ final class ActivityStack {
         if (prevTask != null && prevTask.mOnTopOfHome && prev.finishing && prev.frontOfTask) {
             if (DEBUG_STACK)  mStackSupervisor.validateTopActivitiesLocked();
             if (prevTask == nextTask) {
-                prevTask.setFrontOfTask();
-            } else if (prevTask != topTask()) {
+                ArrayList<ActivityRecord> activities = prevTask.mActivities;
+                final int numActivities = activities.size();
+                for (int activityNdx = 0; activityNdx < numActivities; ++activityNdx) {
+                    final ActivityRecord r = activities.get(activityNdx);
+                    // r is usually the same as next, but what if two activities were launched
+                    // before prev finished?
+                    if (!r.finishing) {
+                        r.frontOfTask = true;
+                        break;
+                    }
+                }
+            } else if (prevTask != topTask() && !prev.floatingWindow) {
                 // This task is going away but it was supposed to return to the home task.
                 // Now the task above it has to return to the home task instead.
                 final int taskNdx = mTaskHistory.indexOf(prevTask) + 1;

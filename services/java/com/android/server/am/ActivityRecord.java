@@ -142,6 +142,7 @@ final class ActivityRecord {
 
     boolean topIntent;
     boolean newTask;
+    boolean newAppTask;
     boolean floatingWindow;
 
     int launchCount;        // count of launches since last state
@@ -392,6 +393,9 @@ final class ActivityRecord {
         // lacking in state to be removed if it dies.
         haveState = true;
 
+        topIntent = false;
+        floatingWindow = false;
+
         if (aInfo != null) {
             if (aInfo.targetActivity == null
                     || aInfo.launchMode == ActivityInfo.LAUNCH_MULTIPLE
@@ -487,7 +491,8 @@ final class ActivityRecord {
                 processName = aInfo.processName;
             }
 
-            if (intent != null && (aInfo.flags & ActivityInfo.FLAG_EXCLUDE_FROM_RECENTS) != 0) {
+            if ((intent != null && (aInfo.flags & ActivityInfo.FLAG_EXCLUDE_FROM_RECENTS) != 0)
+                || floatingWindow) {
                 intent.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
             }
 
@@ -651,7 +656,7 @@ final class ActivityRecord {
             int requestCode, int resultCode,
             Intent resultData) {
         ActivityResult r = new ActivityResult(from, resultWho,
-        		requestCode, resultCode, resultData);
+        requestCode, resultCode, resultData);
         if (results == null) {
             results = new ArrayList<ResultInfo>();
         }
